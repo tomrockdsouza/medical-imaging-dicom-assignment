@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag and Upload DICOM File</title>
+    <style>
+        /* Style the drop zone */
+        #drop-zone {
+            width: 300px;
+            height: 150px;
+            border: 2px dashed #ccc;
+            text-align: center;
+            padding: 20px;
+            margin: 20px auto;
+            cursor: pointer;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.5.1/axios.min.js"></script>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+</head>
+<body>
+
+<div id="drop-zone">
+    <p>Drag and drop a DICOM file here or click to select one.</p>
+</div>
+<p class="w3-center" id="output_label" style="display: none;">
+    Last DICOM file threshold volume in mm3: <code id="volume_mm3">N/A</code> cubic millimeters
+</p>
+
+
+<input id="main_file_input" type='file' accept='.dcm' style='display: none' onchange="filechange()"/>
+
+<div id="wait-modal" class="w3-modal w3-grey" style="z-index:1;">
+    <div class="w3-modal-content w3-center w3-padding">
+        <h1>Please Wait</h1>
+    </div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('main_file_input');
+
+    // code that trigger when a proper dicom files in selected or dragged
+    function filechange() {
+        if (fileInput.files.length === 0) return;
+        else if (fileInput.files.length > 1) {
+            alert('file input element has more than 1 file');
+            return;
+        }
+        document.getElementById('wait-modal').style.display = 'block';
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        axios.post('/upload', formData)
+            .then(function (response) {
+                if (response.status === 200) {
+                    document.getElementById('wait-modal').style.display = 'none';
+                    document.getElementById('output_label').style.display = '';
+                    document.getElementById('volume_mm3').innerHTML = response.data['volume'];
+                } else {
+                    alert('Error Occurred');
+                }
+            });
+    }
+
+    const dropZone = document.getElementById('drop-zone');
+
+    // code to apply when a file is dragged to upload a file div
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.border = '2px dashed #ccc';
+
+        files = e.dataTransfer.files;
+
+        if (files.length === 1) {
+            const file = files[0];
+            if (file.type === 'application/dicom') {
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+                filechange();
+            } else {
+                alert('Please drop a DICOM file.');
+            }
+        } else if (files.length > 1) {
+            alert('Please drop only one file at a time.');
+        }
+    });
+
+    // Code to Handle when the upload file div is clicked
+    dropZone.addEventListener('click', () => {
+        fileInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (files.length === 1) {
+                const file = files[0];
+                if (file.type !== 'application/dicom') {
+                    alert('Please select a DICOM file.');
+                }
+            } else if (files.length > 1) {
+                alert('Please select only one file at a time.');
+            }
+        });
+
+        document.body.appendChild(fileInput);
+        fileInput.click();
+        document.body.removeChild(fileInput);
+    });
+
+</script>
+</body>
+</html>
